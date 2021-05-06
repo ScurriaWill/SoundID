@@ -26,39 +26,32 @@ df.head()
 
 
 def diagram_stuff():
-    dat1, sampling_rate1 = librosa.load('urbansound8k/fold5/100032-3-0-0.wav')
-    dat2, sampling_rate2 = librosa.load('urbansound8k/fold5/100263-2-0-117.wav')
+    dat_1, sampling_rate_1 = librosa.load('urbansound8k/fold5/100032-3-0-0.wav')
 
     plt.figure(figsize=(20, 10))
-    D = librosa.amplitude_to_db(np.abs(librosa.stft(dat1)), ref=np.max)
+    d = librosa.amplitude_to_db(np.abs(librosa.stft(dat_1)), ref=np.max)
     plt.subplot(4, 2, 1)
-    librosa.display.specshow(D, y_axis='linear')
-    plt.colorbar(format='%+2.0f dB')
-    plt.title('Linear-frequency power spectrogram')
-
-    plt.figure(figsize=(20, 10))
-    D = librosa.amplitude_to_db(np.abs(librosa.stft(dat2)), ref=np.max)
-    plt.subplot(4, 2, 1)
-    librosa.display.specshow(D, y_axis='linear')
+    librosa.display.specshow(d, y_axis='linear')
     plt.colorbar(format='%+2.0f dB')
     plt.title('Linear-frequency power spectrogram')
 
     '''Using random samples to observe difference in waveforms.'''
 
-    arr = np.array(df["slice_file_name"])
+    misc = np.array(df["slice_file_name"])
     fold = np.array(df["fold"])
     cla = np.array(df["class"])
 
     for i in range(192, 197, 2):
-        path = 'urbansound8k/fold' + str(fold[i]) + '/' + arr[i]
+        path = 'urbansound8k/fold' + str(fold[i]) + '/' + misc[i]
         data, sampling_rate = librosa.load(path)
-        plt.figure()  # figsize=(10, 5)
-        D = librosa.amplitude_to_db(np.abs(librosa.stft(data)), ref=np.max)
+        plt.figure()
+        d = librosa.amplitude_to_db(np.abs(librosa.stft(data)), ref=np.max)
         plt.subplot(4, 2, 1)
-        librosa.display.specshow(D, y_axis='linear')
+        librosa.display.specshow(d, y_axis='linear')
         plt.colorbar(format='%+2.0f dB')
         plt.title(cla[i])
         plt.show()
+
 
 '''EXAMPLE'''
 
@@ -70,42 +63,43 @@ feature = []
 label = []
 
 
-def parser(row):
+def parser():
     # Function to load files and extract features
     for i in range(8732):
         file_name = 'urbansound8k/fold' + str(df["fold"][i]) + '/' + df["slice_file_name"][i]
         # Here kaiser_fast is a technique used for faster extraction
-        X, sample_rate = librosa.load(file_name, res_type='kaiser_fast')
+        x, sample_rate = librosa.load(file_name, res_type='kaiser_fast')
         # We extract mfcc feature from data
-        mels = np.mean(librosa.feature.melspectrogram(y=X, sr=sample_rate).T, axis=0)
-        feature.append(mels)
+        place = np.mean(librosa.feature.melspectrogram(y=x, sr=sample_rate).T, axis=0)
+        feature.append(place)
         label.append(df["classID"][i])
     return [feature, label]
 
+
 def ai_stuff():
-    temp = parser(df)
+    temp = parser()
 
     temp = np.array(temp)
     data = temp.transpose()
 
-    X_ = data[:, 0]
-    Y = data[:, 1]
-    print(X_.shape, Y.shape)
-    X = np.empty([8732, 128])
+    x_ = data[:, 0]
+    y = data[:, 1]
+    print(x_.shape, y.shape)
+    x = np.empty([8732, 128])
 
     for i in range(8732):
-        X[i] = (X_[i])
+        x[i] = (x_[i])
 
-    Y = to_categorical(Y)
+    y = to_categorical(y)
 
     '''Final Data'''
-    print(X.shape)
-    print(Y.shape)
+    print(x.shape)
+    print(y.shape)
 
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, random_state=1)
+    x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=1)
 
-    X_train = X_train.reshape(6549, 16, 8, 1)
-    X_test = X_test.reshape(2183, 16, 8, 1)
+    x_train = x_train.reshape(6549, 16, 8, 1)
+    x_test = x_test.reshape(2183, 16, 8, 1)
 
     input_dim = (16, 8, 1)
 
@@ -122,13 +116,13 @@ def ai_stuff():
 
     model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
-    model.fit(X_train, Y_train, epochs=90, batch_size=50, validation_data=(X_test, Y_test))
+    model.fit(x_train, y_train, epochs=90, batch_size=50, validation_data=(x_test, y_test))
 
     model.summary()
     model.save('sound_identifier.h5')
 
-    predictions = model.predict(X_test)
-    score = model.evaluate(X_test, Y_test)
+    predictions = model.predict(x_test)
+    score = model.evaluate(x_test, y_test)
     print(score)
 
     predictions = np.argmax(predictions, axis=1)
