@@ -119,7 +119,7 @@ def ai_stuff():
     model.fit(x_train, y_train, epochs=90, batch_size=50, validation_data=(x_test, y_test))
 
     model.summary()
-    model.save('sound_identifier.h5')
+    model.save("sound_identifier")
 
     predictions = model.predict(x_test)
     score = model.evaluate(x_test, y_test)
